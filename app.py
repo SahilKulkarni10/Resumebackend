@@ -7,7 +7,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "https://resume-refine-lilac.vercel.app"}})
 
 UPLOAD_FOLDER = './uploads/resume/'
 if not os.path.exists(UPLOAD_FOLDER):
