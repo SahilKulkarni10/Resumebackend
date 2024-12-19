@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Filtration System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container fade-in">
+        <h1>Resume Filtration System</h1>
+        <form id="uploadForm">
+            <div class="form-group">
+                <label for="numResumes">How many resumes do you want to upload?</label>
+                <input type="number" id="numResumes" name="numResumes" required placeholder="Enter number of resumes to upload (e.g., 10)">
+            </div>
+            <div class="form-group">
+                <label for="resumeFile">Upload Resumes (PDF only)</label>
+                <input type="file" id="resumeFile" name="file" accept=".pdf" multiple required>
+            </div>
+            <div class="form-group">
+                <label for="skill">Skill to Search For</label>
+                <input type="text" id="skill" name="skill" required placeholder="Enter a skill (e.g., Python)">
+            </div>
+            <div class="form-group">
+                <label for="requiredSkills">Required Skills for ATS (comma-separated)</label>
+                <input type="text" id="requiredSkills" name="requiredSkills" placeholder="e.g., Python, Machine Learning, SQL">
+            </div>
+            <button type="submit" class="btn-grow">Upload</button>
+        </form>
+
+        <div id="result" class="slide-up">
+            <h2>Results</h2>
+            <div id="output"></div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('uploadForm');
+        const outputDiv = document.getElementById('output');
+    
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+    
+            const formData = new FormData();
+            const numResumes = document.getElementById('numResumes').value;
+            const files = document.getElementById('resumeFile').files;
+
+       
+            if (files.length != numResumes) {
+                alert(`Please upload exactly ${numResumes} resumes.`);
+                return;
+            }
+
+            for (const file of files) {
+                formData.append('file', file);
+            }
+
+            formData.append('skill', document.getElementById('skill').value);
+
+            const requiredSkills = document.getElementById('requiredSkills').value;
+            formData.append('requiredSkills', requiredSkills);
+
+            try {
+                const response = await fetch('/parseresume', {
+                    method: 'POST',
+                    body: formData
+                });
+    
+                const result = await response.json();
+                if (response.ok) {
+                    outputDiv.innerHTML = `
+                        <p><strong>Skill Searched:</strong> ${result.skill}</p>
+                        <p><strong>Frequency of Skill:</strong> ${result.frequency}</p>
+                        <p><strong>Extracted Skills:</strong> ${Object.entries(result.skills).map(([skill, count]) => `${skill}: ${count}`).join(', ')}</p>
+                        <h3>Top Resumes Based on ATS Score:</h3>
+                        <ul>
+                            ${result.top_resumes.map(resume => `
+                                <li>
+                                    <strong>Filename:</strong> ${resume.filename}<br>
+                                    <strong>ATS Score:</strong> ${resume.ats_score}<br>
+                                    <strong>Matched Skills:</strong> ${resume.matched_skills.join(', ')}
+                                </li>
+                            `).join('')}
+                        </ul>
+                    `;
+                } else {
+                    alert(`Error: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            }
+        });
+    </script>
+</body>
+</html>
