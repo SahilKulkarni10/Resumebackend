@@ -9,21 +9,21 @@ import logging
 
 app = Flask(__name__)
 
-# Set up logging
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 CORS(app)
 
-# Gemini API configuration
-GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  # Set your API key in environment variables
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')  
 if not GEMINI_API_KEY:
     logger.warning("GEMINI_API_KEY environment variable is not set. AI feedback will not work.")
 genai.configure(api_key=GEMINI_API_KEY)
 
 # Available Gemini models
 AVAILABLE_MODELS = [
-    "gemini-2.0-flash-exp",  # First choice - free experimental model
+    "gemini-2.0-flash-exp",
     "gemini-1.5-flash",
     "gemini-1.0-pro",    
     "gemini-pro"        
@@ -47,7 +47,7 @@ SKILL_WEIGHTS = {
     "deep learning": 4, "mern": 2, "docker": 2
 }
 
-# Helper functions moved outside to be accessible by multiple routes
+
 def read_pdf(file_path):
     """Read text content from a PDF file."""
     try:
@@ -85,7 +85,7 @@ def calculate_ats_score(required_skills, resume_text):
             score += SKILL_WEIGHTS.get(skill, 1)
         total_weight += SKILL_WEIGHTS.get(skill, 1)
 
-    # Ensure we show a score even if only one skill matches
+
     if total_weight > 0:
         ats_score = (score / total_weight) * 100
     else:
@@ -222,21 +222,30 @@ def generate_resume_feedback(resume_text, required_skills):
 
         Consider these required skills: {skills_text}
 
-        Provide specific, actionable feedback to improve this resume's ATS score. Focus on:
-        1. Keyword optimization for required skills
-        2. Resume structure and formatting issues
-        3. Content gaps or improvements
-        4. Specific suggestions to increase ATS compatibility
-        
+        Provide specific, actionable feedback to improve this resume's ATS score. Focus on the following areas and ensure each suggestion is detailed and specific.
+        Create 6 suggestions that cover:
+
+        1. Project descriptions with quantifiable AI/ML impact
+        2. Achievements with specific metrics and context
+        3. Strategic keyword placement and optimization
+        4. Resume structure and formatting consistency
+        5. Quantifiable project outcomes and metrics
+        6. High-impact section organization
+
         FORMAT YOUR RESPONSE EXACTLY AS FOLLOWS:
-        • First suggestion with specific examples and clear action items
-        • Second suggestion focused on a different aspect of the resume
-        • Third suggestion specifically about keywords and skills placement
-        • Fourth suggestion about resume structure or formatting
-        • Fifth suggestion about quantifiable achievements
-        • Final suggestion with a high-impact improvement
-        
-        Each bullet point should be concise but specific, offering clear guidance. Start every line with the bullet point "•" character.
+        • First suggestion focusing on clarifying and quantifying AI/ML impact in projects
+        • Second suggestion emphasizing quantifiable results in achievements
+        • Third suggestion about keyword optimization and strategic placement
+        • Fourth suggestion about standardizing formatting and section headings
+        • Fifth suggestion about adding specific metrics to projects
+        • Final suggestion about optimizing section organization for maximum impact
+
+        Important formatting rules:
+        1. Start each suggestion with the bullet point "•" character
+        2. Make each suggestion specific and actionable
+        3. Include clear examples when possible
+        4. Focus on measurable improvements
+        5. Avoid using asterisks or stars in the text
         """
         
         # Loop through available models
@@ -288,22 +297,35 @@ def format_ai_feedback(text):
             continue
             
         # Skip lines that are just headers or numbers
-        if line.isdigit() or line.lower().startswith(('feedback', 'suggestions', 'recommendations')):
+        if (line.isdigit() or 
+            line.lower().startswith(('feedback', 'suggestions', 'recommendations', 'important', 'format', 'rules'))):
             continue
             
+        # Remove any asterisks from the text
+        line = line.replace('*', '')
+        
         # Ensure each line starts with a bullet point
         if not line.startswith('•'):
             # Check if line starts with a different bullet format or number
-            if line.startswith('-') or line.startswith('*') or (line[0].isdigit() and line[1:3] in ['. ', ') ']):
+            if line.startswith('-') or (line[0].isdigit() and line[1:3] in ['. ', ') ']):
                 line = '• ' + line[line.find(' ')+1:]
             else:
                 line = '• ' + line
+        
+        # Clean up any double spaces
+        line = ' '.join(line.split())
                 
         formatted_lines.append(line)
     
     # If no valid lines, provide default feedback
     if not formatted_lines:
-        return "• Ensure your resume includes the required skills explicitly\n• Use industry-standard section headings for better ATS parsing\n• Quantify achievements with numbers and percentages\n• Remove tables, images, and complex formatting\n• Match keywords from the job description exactly\n• Use both acronyms and full terms (e.g., 'AI' and 'Artificial Intelligence')"
+        return """
+• Ensure your resume includes the required skills explicitly
+• Use industry-standard section headings for better ATS parsing
+• Quantify achievements with numbers and percentages
+• Remove tables, images, and complex formatting
+• Match keywords from the job description exactly
+• Use both acronyms and full terms (e.g., 'AI' and 'Artificial Intelligence')"""
     
     return '\n'.join(formatted_lines)
 
